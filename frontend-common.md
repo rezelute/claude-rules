@@ -14,34 +14,87 @@ own files and build on top of this one.
 
 ## CSS & Styling
 
-- **Never hardcode specific values** — padding, margin, color, font size,
-  radius, shadow, etc. — directly in a component or stylesheet. Every such
-  value must come from the token system (a Tailwind token/utility backed by
-  `@theme`, or a CSS variable). If a value you need doesn't have a token yet,
-  add one rather than writing the raw value inline.
-- Always set up a token system, even on a small project — raw
-  colors/sizes/fonts hardcoded inline make a later rebrand, dark-mode pass, or
-  spacing tweak a find-and-replace across every component instead of a
-  one-line edit to a token.
-- Split token/style files by type rather than dumping everything in one
-  stylesheet — e.g. separate files for colors, typography/fonts, headings,
-  spacing, component overrides — all pulled together from one entry
-  stylesheet (`main.css`).
-- **Tailwind v4 (optional — only if using Tailwind):** tokens are CSS-first,
-  defined in `@theme` blocks (`--color-*`, `--font-*`, `--text-*`,
-  `--spacing-*`, etc.) — there's no `tailwind.config.js`. `@theme` isn't
-  limited to a single file: split it the same way as any other tokens
-  (`theme/colors.css`, `theme/typography.css`, ..., each with its own
-  `@theme { ... }` block) and `@import` every partial into the one entry
-  stylesheet — Tailwind picks up every `@theme` block in the build regardless
-  of which imported file declares it.
-- Custom classes that aren't plain Tailwind utility usage (heading variants,
-  page margins, component style overrides) belong in `@layer components` /
-  `@layer utilities`, not bare unscoped CSS — that keeps them playing
-  correctly with Tailwind's cascade/specificity instead of fighting utility
-  classes at random.
-- Only the entry stylesheet imports Tailwind and the token/style partials —
-  components should never `@import` a CSS file directly.
+### The core rule
+
+Never hardcode a value — color, spacing, font size, radius, shadow, etc. — directly in a component. Every value comes from a token. If a token doesn't exist yet for what you need, add one instead of writing the value inline.
+
+Why: without tokens, a rebrand or dark-mode pass means hunting down every hardcoded value across every component. With tokens, it's a one-line edit.
+
+### The two layers
+
+There are two layers, and they should never be confused with each other:
+
+1. **Tokens (plain CSS custom properties)** — the source of truth. Just `:root { --color-primary: #2563eb; }`. No Tailwind syntax at all. Works whether or not Tailwind is even installed.
+2. **Tailwind (optional)** — if used, it only _reads_ the tokens, it never defines new values of its own. Tailwind should always be a thin layer sitting on top of the tokens, not a second source of truth.
+
+### File layout
+
+Split files by category from the start, even on a small project — there's no downside to doing this early, and it avoids a painful reorganization later.
+
+```
+assets/css/
+├── tokens/
+│   ├── colors.css        ← plain CSS vars — vanilla, no Tailwind
+│   ├── typography.css
+│   └── spacing.css
+├── theme/                 ← Tailwind only: maps tokens into Tailwind's namespace
+│   ├── colors.css
+│   ├── typography.css
+│   └── spacing.css
+├── utilities/              ← Tailwind only: custom classes built on the tokens
+│   ├── surfaces.css
+│   ├── text.css
+│   ├── borders.css
+│   ├── interactive.css
+│   └── layout.css
+└── main.css                 ← imports everything, in order
+```
+
+- **`tokens/`** is the only folder that's pure vanilla CSS. Delete Tailwind from the project and these files don't need to change.
+- **`theme/`** and **`utilities/`** only exist if Tailwind is in the project. They don't define new values — they just expose the tokens as Tailwind utilities.
+- **`main.css`** is the only file allowed to `@import` anything. Components never `@import` a CSS file directly.
+- Import order matters: tokens → theme → utilities. Each layer depends on the one before it.
+
+### Tailwind v4 specifics (skip this section if not using Tailwind)
+
+Tailwind v4 defines its theme in CSS directly, using `@theme` blocks — there's no `tailwind.config.js` needed for this (the config file still exists, but only for plugins/JS config now, not for tokens).
+
+Each `theme/*.css` file maps its matching token file into Tailwind's namespace, e.g.:
+
+```css
+/* theme/colors.css */
+@theme {
+  --color-primary: var(--color-primary);
+}
+```
+
+Never write a custom class as bare, unwrapped CSS (`.surface-card { ... }` with no `@layer`/`@utility` wrapper) — it sits outside Tailwind's cascade system entirely, so whether it wins or loses against a real Tailwind utility becomes unpredictable (dependent on source order rather than intent). Every custom class goes into one of two buckets:
+
+**`@utility` — layout/spacing primitives, single-purpose classes, anything that should support variants.**
+
+```css
+/* utilities/layout.css */
+@utility vstack-lg {
+  @apply flex flex-col gap-stack-lg;
+}
+```
+
+This registers the class as a first-class Tailwind utility: it gets automatic variant support (`hover:vstack-lg`, `dark:vstack-lg`, `md:vstack-lg` just work, no extra setup) and utility-level override priority.
+
+**`@layer components` — multi-property styled components meant to be overridable by utilities.**
+
+```css
+/* components/buttons.css */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium bg-primary text-white;
+  }
+}
+```
+
+This gives the class _lower_ priority than utilities, on purpose — so a one-off `class="btn bg-red-500"` cleanly overrides just the background without a specificity fight. Things like `.btn`, `.badge`, `.card` (bundling several properties together, expected to be tweaked per-instance) belong here, not in `@utility`.
+
+Rule of thumb: if it's a single-property pattern (spacing, a surface color, a text color) → `@utility`. If it's a bundled, multi-property component meant to be overridden per-instance → `@layer components`.
 
 ## Data Fetching **(optional — only if the project talks to a backend)**
 
