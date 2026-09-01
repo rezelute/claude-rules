@@ -4,9 +4,11 @@
 
 ## Shared rules
 
-@~/.claude/custom-rules/common.md
-@~/.claude/custom-rules/typescript.md
-@~/.claude/custom-rules/backend.md
+`@~/.claude/custom-rules/common.md`
+
+`@~/.claude/custom-rules/typescript.md`
+
+`@~/.claude/custom-rules/backend.md`
 
 ## Project-specific notes
 
