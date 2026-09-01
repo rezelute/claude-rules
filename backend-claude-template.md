@@ -9,8 +9,3 @@
 `@~/.claude/custom-rules/typescript.md`
 
 `@~/.claude/custom-rules/backend.md`
-
-## Project-specific notes
-
-- <anything unique to this repo — deployment target, non-standard folder
-  layout, external services, current focus, etc.>
