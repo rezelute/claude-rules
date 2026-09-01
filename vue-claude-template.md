@@ -5,8 +5,11 @@
 ## Shared rules
 
 `@~/.claude/custom-rules/common.md`
+
 `@~/.claude/custom-rules/typescript.md`
+
 `@~/.claude/custom-rules/frontend-common.md`
+
 `@~/.claude/custom-rules/vue.md`
 
 ## Project-specific notes
