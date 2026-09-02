@@ -109,6 +109,18 @@ Rule of thumb: if it's a single-property pattern (spacing, a surface color, a te
   section) so the frontend can branch on `error.code` rather than parsing
   message strings.
 
+## Static JSON Data
+
+- When JSON files are used as static data in the frontend — either because
+  there's no backend yet, or because part of the data is static while the
+  rest will come from a backend — always structure/build that JSON the way
+  it would look coming from a real API response, and split it accordingly
+  (e.g. separate files/keys per resource, same shape a backend endpoint
+  would return) rather than as one ad hoc blob.
+- Why: this keeps the eventual swap to a real API a data-source change only
+  — components and consuming code don't need to be rewritten once the
+  backend part lands.
+
 ## Error Handling
 
 - Route the majority of `catch` blocks through one shared error-handling
