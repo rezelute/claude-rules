@@ -164,8 +164,8 @@ Implements the policy in `frontend-common.md`.
 
 ## Testing
 
-- Vitest + `@vue/test-utils`, `happy-dom`/`jsdom` environment, tests under
-  `tests/`
+Implements the policy in `frontend-common.md`. Stack: Vitest + `@vue/test-utils`,
+`happy-dom`/`jsdom` environment (see Stack above).
 
 ## Notes for Claude
 

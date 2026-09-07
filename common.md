@@ -3,6 +3,11 @@
 Cross-project conventions — language-agnostic, applies to frontend and backend
 alike. See `typescript.md` for TypeScript-specific rules on top of this.
 
+## Analysing
+
+- Minimise going down rabbit holes without asking me first about what you want to do.
+- Don't make stuff up, if unsure look it up online.
+
 ## Dependencies
 
 - Always use the latest **stable** version of every dependency, including the
@@ -17,7 +22,7 @@ alike. See `typescript.md` for TypeScript-specific rules on top of this.
   lines that are easy to follow beats a one-liner that needs unpacking.
 - Comment the _why_, not the _what_ — the code already shows what it does; a
   comment earns its place by explaining a non-obvious reason, trade-off, or
-  gotcha.
+  gotcha. Keep comments concise but meaningful.
 - Keep functions/methods focused on one responsibility — if something is
   doing several distinct things, extract them into named helpers rather than
   growing one long function.

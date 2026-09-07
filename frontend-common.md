@@ -14,87 +14,64 @@ own files and build on top of this one.
 
 ## CSS & Styling
 
-### The core rule
-
-Never hardcode a value — color, spacing, font size, radius, shadow, etc. — directly in a component. Every value comes from a token. If a token doesn't exist yet for what you need, add one instead of writing the value inline.
-
-Why: without tokens, a rebrand or dark-mode pass means hunting down every hardcoded value across every component. With tokens, it's a one-line edit.
-
-### The two layers
-
-There are two layers, and they should never be confused with each other:
-
-1. **Tokens (plain CSS custom properties)** — the source of truth. Just `:root { --color-primary: #2563eb; }`. No Tailwind syntax at all. Works whether or not Tailwind is even installed.
-2. **Tailwind (optional)** — if used, it only _reads_ the tokens, it never defines new values of its own. Tailwind should always be a thin layer sitting on top of the tokens, not a second source of truth.
-
-### File layout
-
-Split files by category from the start, even on a small project — there's no downside to doing this early, and it avoids a painful reorganization later.
+Three-layer token system: primitives (`:root`) → semantic (`@theme`) → utilities (`@utility`). Primitives stay `:root` since components never touch them directly. Semantic uses `@theme` so Tailwind auto-generates utilities (`bg-brand`) from it — if Tailwind is ever dropped, swap `@theme` back to `:root` and everything downstream still works.
 
 ```
-assets/css/
-├── tokens/
-│   ├── colors.css        ← plain CSS vars — vanilla, no Tailwind
-│   ├── typography.css
-│   └── spacing.css
-├── theme/                 ← Tailwind only: maps tokens into Tailwind's namespace
-│   ├── colors.css
-│   ├── typography.css
-│   └── spacing.css
-├── utilities/              ← Tailwind only: custom classes built on the tokens
-│   ├── surfaces.css
-│   ├── text.css
-│   ├── borders.css
-│   ├── interactive.css
-│   └── layout.css
-└── main.css                 ← imports everything, in order
+tokens/
+├── primitives/
+│   ├── color.css
+│   ├── spacing.css
+│   ├── radius.css
+│   └── typography.css
+├── semantic/
+│   ├── color.css
+│   ├── spacing.css
+│   └── typography.css
+├── utilities/
+│   ├── stack.css
+│   ├── inset.css
+│   └── typography.css
+└── index.css
 ```
 
-- **`tokens/`** is the only folder that's pure vanilla CSS. Delete Tailwind from the project and these files don't need to change.
-- **`theme/`** and **`utilities/`** only exist if Tailwind is in the project. They don't define new values — they just expose the tokens as Tailwind utilities.
-- **`main.css`** is the only file allowed to `@import` anything. Components never `@import` a CSS file directly.
-- Import order matters: tokens → theme → utilities. Each layer depends on the one before it.
-
-### Tailwind v4 specifics (skip this section if not using Tailwind)
-
-Tailwind v4 defines its theme in CSS directly, using `@theme` blocks — there's no `tailwind.config.js` needed for this (the config file still exists, but only for plugins/JS config now, not for tokens).
-
-Each `theme/*.css` file maps its matching token file into Tailwind's namespace, e.g.:
+**`primitives/spacing.css`**
 
 ```css
-/* theme/colors.css */
+:root {
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+}
+```
+
+**`semantic/spacing.css`**
+
+```css
 @theme {
-  --color-primary: var(--color-primary);
+  /* Gap between stacked children — consumed by vstack-* utilities. */
+  --spacing-stack-md: var(--spacing-md);
+  --spacing-stack-lg: var(--spacing-lg);
 }
 ```
 
-Never write a custom class as bare, unwrapped CSS (`.surface-card { ... }` with no `@layer`/`@utility` wrapper) — it sits outside Tailwind's cascade system entirely, so whether it wins or loses against a real Tailwind utility becomes unpredictable (dependent on source order rather than intent). Every custom class goes into one of two buckets:
-
-**`@utility` — layout/spacing primitives, single-purpose classes, anything that should support variants.**
+**`utilities/stack.css`**
 
 ```css
-/* utilities/layout.css */
 @utility vstack-lg {
-  @apply flex flex-col gap-stack-lg;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-lg);
 }
 ```
 
-This registers the class as a first-class Tailwind utility: it gets automatic variant support (`hover:vstack-lg`, `dark:vstack-lg`, `md:vstack-lg` just work, no extra setup) and utility-level override priority.
+**Rules**
 
-**`@layer components` — multi-property styled components meant to be overridable by utilities.**
-
-```css
-/* components/buttons.css */
-@layer components {
-  .btn {
-    @apply px-4 py-2 rounded-md font-medium bg-primary text-white;
-  }
-}
-```
-
-This gives the class _lower_ priority than utilities, on purpose — so a one-off `class="btn bg-red-500"` cleanly overrides just the background without a specificity fight. Things like `.btn`, `.badge`, `.card` (bundling several properties together, expected to be tweaked per-instance) belong here, not in `@utility`.
-
-Rule of thumb: if it's a single-property pattern (spacing, a surface color, a text color) → `@utility`. If it's a bundled, multi-property component meant to be overridden per-instance → `@layer components`.
+- Never access primitives directly — always through a semantic var.
+- Rarely use Tailwind's default scale for color/spacing/font-size/radius/shadow (`bg-blue-500`, `p-4`) — use tokens, so values stay themeable and tracked in one system.
+- No arbitrary values (`bg-[#3b82f6]`, `p-[18px]`) — add a token instead.
+- Reusable multi-property patterns → `@utility` (free variant support: `hover:`, `dark:`, `md:`). One-off, component-specific patterns → vanilla CSS in that component's file.
+- Never `@apply` — vanilla CSS reading `var(--...)` is more readable than a long `@apply` line.
+- Theme overrides only touch `semantic/*.css`.
 
 ## Data Fetching **(optional — only if the project talks to a backend)**
 
@@ -173,4 +150,14 @@ Rule of thumb: if it's a single-property pattern (spacing, a surface color, a te
 
 ## Testing
 
-- Tests mirror the source path being tested.
+- Test files are co-located with the source file they test (e.g. `UserCard.vue` + `UserCard.spec.ts` in the same folder) — not grouped into a separate `tests/` tree.
+- Access elements/components under test through a shared `data-test` lookup
+  helper (e.g. `findElementById`/`findComponentById`) instead of writing
+  `[data-test="..."]` selectors inline in every test — one place to change if
+  the attribute or lookup logic changes.
+- Mock data lives in one shared folder (`tests/mocks/`) reused across tests —
+  never inline ad hoc mock objects in individual test files. Type each mock
+  against its
+  corresponding generated/existing type (API response type, model, etc.) so
+  it breaks at compile time if the real shape changes, rather than drifting
+  silently out of sync.
